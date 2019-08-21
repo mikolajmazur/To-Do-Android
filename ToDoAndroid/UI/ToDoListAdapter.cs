@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using Android.App;
 using Android.Content;
-using Android.OS;
-using Android.Runtime;
 using Android.Views;
 using Android.Widget;
-using Java.Lang;
-using ToDoAndroid.Contexts;
 using ToDoAndroid.Models;
+using ToDoAndroid.Services;
 
 namespace ToDoAndroid.UI
 {
@@ -19,14 +12,13 @@ namespace ToDoAndroid.UI
     {
         private List<ToDoItem> _toDos;
         private MainActivity _mainActivity;
+        private IToDoRepository _todoRepository;
 
-        public ToDoListAdapter(MainActivity mainActivity)
+        public ToDoListAdapter(MainActivity mainActivity, IToDoRepository toDoRepository)
         {
-            using (var context = new ToDosContext())
-            {
-                _toDos = context.ToDos.Select(o => o).ToList();
-            }
             _mainActivity = mainActivity;
+            _todoRepository = toDoRepository;
+            _toDos = _todoRepository.GetAll();
         }
 
         public override int Count => _toDos.Count;
@@ -67,23 +59,14 @@ namespace ToDoAndroid.UI
         public void Add(ToDoItem toDo)
         {
             _toDos.Add(toDo);
-            using (var context = new ToDosContext())
-            {
-                context.Add(toDo);
-                context.SaveChanges();
-            }
+            _todoRepository.AddAndSave(toDo);
             NotifyDataSetChanged();
         }
 
         private void DeleteButton_Click(object sender, EventArgs e)
         {
             var toDoToRemove = GetToDoToRemove((ImageButton)sender);
-            using (var context = new ToDosContext())
-            {
-                context.ToDos.Remove(toDoToRemove);
-                context.SaveChanges();
-            }
-
+            _todoRepository.DeleteAndSave(toDoToRemove);
             _toDos.Remove(toDoToRemove);
             NotifyDataSetChanged();
         }

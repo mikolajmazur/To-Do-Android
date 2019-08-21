@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using Android.App;
+using Android.Content;
 using Android.OS;
 using Android.Runtime;
 using Android.Support.Design.Widget;
 using Android.Support.V7.App;
 using Android.Views;
+using Android.Views.InputMethods;
 using Android.Widget;
 using ToDoAndroid.Models;
+using ToDoAndroid.Services;
 using ToDoAndroid.UI;
 using AlertDialog = Android.Support.V7.App.AlertDialog;
 
@@ -27,7 +30,9 @@ namespace ToDoAndroid
             Android.Support.V7.Widget.Toolbar toolbar = FindViewById<Android.Support.V7.Widget.Toolbar>(Resource.Id.toolbar);
             SetSupportActionBar(toolbar);
 
-            _adapter = new ToDoListAdapter(this);
+            var toDoRepository = new ToDoRepository();
+            toDoRepository.EnsureCreated();
+            _adapter = new ToDoListAdapter(this, toDoRepository);
             var listView = (ListView)FindViewById<ListView>(Resource.Id.toDoListView);
             listView.Adapter = _adapter;
 
@@ -55,7 +60,9 @@ namespace ToDoAndroid
         private void FabOnClick(object sender, EventArgs eventArgs)
         {
             var input = new EditText(this);
-            input.InputType = Android.Text.InputTypes.ClassText;
+            input.InputType = Android.Text.InputTypes.TextFlagCapSentences;
+            input.FocusChange += Input_FocusChange;
+
             var todoText = String.Empty;
             var alertDialogBuilder = new AlertDialog.Builder(this)
             // TODO: replace with resource string
@@ -74,8 +81,22 @@ namespace ToDoAndroid
                 .SetNegativeButton(Android.Resource.String.Cancel, 
                 (alertSender, args) => ((AlertDialog)alertSender).Cancel() )
                 .Show();
-
+            input.RequestFocus();
         }
+
+        private void Input_FocusChange(object sender, View.FocusChangeEventArgs e)
+        {
+            if (e.HasFocus)
+            {
+                var senderAsEditText = (EditText)sender;
+                senderAsEditText.Post(() =>
+                {
+                    var inputMethodManager = (InputMethodManager)this.GetSystemService(Context.InputMethodService);
+                    inputMethodManager.ShowSoftInput(senderAsEditText, Android.Views.InputMethods.ShowFlags.Implicit);
+                });
+            }
+        }
+
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
         {
             Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
